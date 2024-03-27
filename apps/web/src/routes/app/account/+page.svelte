@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Plus, XCircle } from 'lucide-svelte';
+	import { Plus, PlusCircle, XCircle } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
 	import { AppShell } from '$lib/components/layout/shell';
@@ -12,6 +12,17 @@
 	import { slide } from 'svelte/transition';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
+	import type { PageData } from './$types';
+	import { enhance } from '$app/forms';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { getContext } from '$lib/utils.js';
+	import PricingTiers from '$lib/components/pricing/PricingTiers.svelte';
+
+	const subscriptionStore = getContext('subscriptionStore');
+
+	export let data: PageData;
+	let newApiName = '';
+	let newApiValue = '';
 
 	let inputs: { name: string; value: string }[] = [];
 
@@ -30,18 +41,10 @@
 		inputs.push({ name: '', value: '' });
 		inputs = inputs;
 	}
-	let apiNames = ['Google Maps', 'OpenWeather', 'Twitter API', 'Facebook API'];
 
-	let myApi = [
-		{
-			name: 'googleApi',
-			value: 'qwertyuokjhgfdssdfghjkertyuiqwertyuokjhgfdssdfghjkertyuiqwertyuokjhgfdssdfghjkertyui'
-		},
-		{
-			name: 'openai',
-			value: 'qwertyuokjhgfdssdfghjkertyuiqwertyuokjhgfdssdfghjkertyuiqwertyuokjhgfdssdfghjkertyui'
-		}
-	];
+	$: apiTypes = data.data;
+
+	$: myApi = data.currentUserApis;
 
 	function removeInput(index: number) {
 		inputs.splice(index, 1);
@@ -62,28 +65,11 @@
 		}
 	}
 
-	let newApiName = '';
-	let newApiValue = '';
-
-	function addApi() {
-		if (newApiName && newApiValue) {
-			myApi = [...myApi, { name: newApiName, value: newApiValue }];
-			newApiName = '';
-			newApiValue = '';
-		}
-	}
-	function toggleVisibility(index: number) {
-		myApi[index].isVisible = !myApi[index].isVisible;
-		myApi = myApi;
-	}
 	function removeApi(index: number) {
-		myApi = myApi.filter((_, i) => i !== index);
+		myApi = myApi?.filter((_, i) => i !== index);
 	}
 
-	// Function to handle selection
-	function handleSelect(name: string) {
-		newApiName = name;
-	}
+	$: apiId = null;
 </script>
 
 <AppShell>
@@ -140,7 +126,7 @@
 					<Button
 						variant="outline"
 						aria-label="add input"
-						class="border-border rounded-full border"
+						class="rounded-full border border-border"
 						on:click={addInput}
 					>
 						<Plus />
@@ -148,11 +134,104 @@
 				</Card.Content>
 			</Card.Root>
 		</Tabs.Content>
+		<Tabs.Content value="billing">
+			<Card.Root class="overflow-hidden rounded-lg shadow-xl">
+				<Card.Header class="p-6">
+					<h2 class="text-2xl font-bold">
+						{$subscriptionStore.sub ? 'Your Subscription' : 'Choose a subscription'}
+					</h2>
+				</Card.Header>
+				<Card.Content class="p-6">
+					{#if $subscriptionStore.sub}
+						<div class="space-y-8">
+							<div class="from-background-950 rounded-lg bg-background to-primary-800">
+								<div class="rounded-lg p-6 pt-2">
+									<div class="mb-4 flex items-center justify-between">
+										<div>
+											<h4 class="text-lg font-semibold">{$subscriptionStore.tier?.name}</h4>
+											<p>{$subscriptionStore.sub.plan.interval}ly Subscription</p>
+										</div>
+										<img
+											src={$subscriptionStore.tier?.image}
+											alt=""
+											class="h-20 w-20 rounded-full"
+										/>
+									</div>
+									{#if $subscriptionStore.paymentMethod}
+										<div class="mb-4">
+											<h5 class="mb-1 font-semibold">Payment Method</h5>
+											<Card.Root class="border-none bg-transparent">
+												<Card.Content class="px-0 ">
+													<p class="font-medium">
+														<span>{$subscriptionStore.paymentMethod.card?.brand}</span>
+														<span>...{$subscriptionStore.paymentMethod.card?.last4}</span>
+													</p>
+												</Card.Content>
+											</Card.Root>
+										</div>
+									{/if}
+									<div>
+										<h5 class="mb-1 font-semibold">Renewal Date</h5>
+										<p>
+											{new Date(
+												$subscriptionStore.sub.current_period_end * 1000
+											).toLocaleDateString(undefined, {
+												year: 'numeric',
+												month: 'long',
+												day: '2-digit'
+											})}
+										</p>
+									</div>
+								</div>
+							</div>
+							<div class="text-right">
+								<AlertDialog.Root closeOnOutsideClick>
+									<AlertDialog.Trigger asChild let:builder>
+										<Button builders={[builder]} variant="destructive">Cancel Subscription</Button>
+									</AlertDialog.Trigger>
+									<AlertDialog.Content>
+										<AlertDialog.Header>
+											<AlertDialog.Title>Are you absolutely sure?</AlertDialog.Title>
+											<AlertDialog.Description>
+												This action cannot be undone. This will immediately cancel your
+												subscription.
+											</AlertDialog.Description>
+										</AlertDialog.Header>
+										<AlertDialog.Footer>
+											<AlertDialog.Cancel>
+												<Button
+													variant="outline"
+													class="border-none bg-transparent hover:bg-transparent">Close</Button
+												>
+											</AlertDialog.Cancel>
+											<AlertDialog.Action>
+												<a href="/app/subscription/cancel">
+													<Button class="border-none bg-transparent hover:bg-transparent"
+														>Cancel Subscription</Button
+													>
+												</a>
+											</AlertDialog.Action>
+										</AlertDialog.Footer>
+									</AlertDialog.Content>
+								</AlertDialog.Root>
+							</div>
+						</div>
+					{:else}
+						<PricingTiers />
+					{/if}
+				</Card.Content>
+			</Card.Root>
+		</Tabs.Content>
 		<Tabs.Content value="api">
 			<Card.Root>
-				<Card.Header>API Keys</Card.Header>
+				<Card.Header class="text-xl font-semibold">Your API Keys</Card.Header>
 				<Card.Content>
-					<form class="mb-6" on:submit|preventDefault={addApi}>
+					<form
+						class="mb-6"
+						action="?/addAPI&id={apiId !== undefined ? apiId : ''}"
+						method="POST"
+						use:enhance
+					>
 						<div class="flex flex-wrap gap-4 md:items-end">
 							<div class="max-w-lg flex-1">
 								<DropdownMenu.Root>
@@ -162,12 +241,14 @@
 										</Button>
 									</DropdownMenu.Trigger>
 									<DropdownMenu.Content class="z-50">
-										{#each apiNames as name}
+										{#each apiTypes as apiType}
 											<DropdownMenu.CheckboxItem
-												checked={newApiName === name}
-												on:click={() => handleSelect(name)}
+												checked={newApiName === apiType.name}
+												on:click={() => {
+													apiId = apiType.id;
+												}}
 											>
-												{name}
+												{apiType.name}
 											</DropdownMenu.CheckboxItem>
 										{/each}
 									</DropdownMenu.Content>
@@ -177,6 +258,7 @@
 								<Input
 									placeholder="API Value"
 									bind:value={newApiValue}
+									name="apiValue"
 									class="w-full focus-visible:ring-1 focus-visible:ring-offset-0"
 								/>
 							</div>
@@ -192,42 +274,29 @@
 
 					<div class="space-y-4">
 						{#each myApi as api, index}
-							<div
-								class="bg-background flex items-center rounded-lg p-4 transition-all duration-300 hover:scale-[99%] hover:shadow-xl"
+							<form
+								action="?/removeAPI&id={api.id}"
+								method="POST"
+								use:enhance
+								class="flex items-center rounded-lg bg-background p-4 transition-all duration-300 hover:scale-[99%] hover:shadow-xl"
 								transition:slide={{ duration: 200 }}
 							>
 								<div class="flex flex-col">
-									<!-- svelte-ignore a11y-click-events-have-key-events -->
-									<!-- svelte-ignore a11y-no-static-element-interactions -->
 									<div class="flex">
 										<h3 class="mr-1 text-lg font-semibold">{api.name}</h3>
-										<span
-											class="text-primary cursor-pointer"
-											title={api.value}
-											on:click={() => toggleVisibility(index)}>?</span
-										>
-									</div>
-									<!-- svelte-ignore a11y-click-events-have-key-events -->
-									<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-
-									<div class="flex gap-6">
-										<p
-											class="cursor-pointer"
-											on:click={() => toggleVisibility(index)}
-											title={api.value}
-										>
-											{api.isVisible ? api.value : ' '}
-										</p>
 									</div>
 								</div>
 								<Button
 									variant="destructive"
-									on:click={() => removeApi(index)}
+									type="submit"
+									on:click={() => {
+										removeApi(index);
+									}}
 									class="ml-auto bg-transparent hover:scale-105 hover:bg-transparent"
 								>
 									<XCircle class="text-destructive hover:scale-105" size="18" />
 								</Button>
-							</div>
+							</form>
 						{/each}
 					</div>
 				</Card.Content>
