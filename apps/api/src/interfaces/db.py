@@ -145,7 +145,19 @@ def get_descriptions(agent_ids: list[UUID]) -> dict[UUID, list[str]] | None:
     if len(response.data) < len(agent_ids):
         return None
 
-    return {d["id"]: d["description"] for d in response.data}
+    return {data["id"]: data["description"] for data in response.data}
+
+
+# typed as list[str] even though its technically UUID,
+# since its typed this way in the get_tool_ids_from_agents
+def get_api_key_type_ids(tool_ids: list[str]) -> dict[str, str]:
+    response = (
+        supabase.table("tools")
+        .select("id", "api_key_type_id")
+        .in_("id", tool_ids)
+        .execute()
+    )
+    return {data["id"]: data["api_key_type_id"] for data in response.data}
 
 
 def post_agents(agents: list[AgentModel]) -> None:
@@ -159,17 +171,22 @@ def insert_crew(crew: CrewRequestModel) -> None:
     # supabase.table("crews").upsert(crew.model_dump())
 
 
-def get_tool_api_key(profile_id: UUID, api_key_type_id: UUID) -> str:
-    """Gets an api key given a profile id and the type of api key."""
-    response = (
+def get_tool_api_keys(
+    profile_id: UUID, api_key_type_ids: list[str] | None = None
+) -> dict[str, str]:
+    """Gets all api keys for a profile id, if api_key_type_ids is given, only give api keys corresponding to those key types."""
+    # casted_ids = [str(api_key_type_id) for api_key_type_id in api_key_type_ids]
+    query = (
         supabase.table("users_api_keys")
-        .select("api_key")
-        .filter("profile_id", "eq", str(profile_id))
-        .filter("api_key_type_id", "eq", str(api_key_type_id))
-        .execute()
+        .select("api_key", "api_key_type_id")
+        .eq("profile_id", profile_id)
     )
-    return response.data[0]["api_key"]
-    # This thing might be wrong, dont care right now
+
+    if api_key_type_ids:
+        query = query.in_("api_key_type_id", api_key_type_ids)
+
+    response = query.execute()
+    return {data["api_key_type_id"]: data["api_key"] for data in response.data}
 
 
 def update_status(session_id: UUID, status: SessionStatus) -> None:
@@ -184,12 +201,25 @@ def get_profile_from_id(profile_id: UUID) -> Profile | None:
     return Profile(**response.data[0])
 
 
+# def get_keys_from_profile(profile_id: UUID) -> dict[str, str]:
+#   supabase.table("users_api_keys").select("api_key", "api_key_type_id").eq("profile_id", profile_id)
 if __name__ == "__main__":
-    upsert_session(
-        UUID("2e2e432b-f7c3-409b-932f-de8c7472be80"),
-        {
-            "title": "test_126",
-            "profile_id": "070c1d2e-9d72-4854-a55e-52ade5a42071",
-            "status": "finished",
-        },
-    )
+    # upsert_session(
+    #    UUID("2e2e432b-f7c3-409b-932f-de8c7472be80"),
+    #    {
+    #        "title": "test_126",
+    #        "profile_id": "070c1d2e-9d72-4854-a55e-52ade5a42071",
+    #        "status": "finished",
+    #    },
+    # )
+
+    # print(get_tool_api_key(UUID("070c1d2e-9d72-4854-a55e-52ade5a42071"), UUID("3b64fe26-20b9-4064-907e-f2708b5f1656")))
+    print(get_api_key_type_ids(['4ac25953-dc41-42d5-b9f2-bcae3b2c1d9f', 'fa4c2568-00d9-4e3c-9ab7-44f76f3a0e3f']))
+    # , "3b64fe26-20b9-4064-907e-f2708b5f1656"
+    #print(
+    #    get_tool_api_keys(
+    #        UUID("070c1d2e-9d72-4854-a55e-52ade5a42071"),
+    #        ["5281bbc4-45ea-4f4b-b790-e92c62bbc019"],
+    #    )
+    #)
+    #print(get_tool_api_keys(UUID("070c1d2e-9d72-4854-a55e-52ade5a42071")))

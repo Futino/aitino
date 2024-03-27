@@ -12,7 +12,7 @@ from src.dependencies import (
     rate_limit_tiered,
 )
 from src.interfaces import db
-from src.models import CrewModel, Message, Session, RunRequestModel
+from src.models import CrewModel, Message, RunRequestModel, Session
 from src.parser import parse_input_v0_2 as parse_input
 
 router = APIRouter(
@@ -84,7 +84,9 @@ async def run_crew(
         raise HTTPException(status_code=400, detail=f"Failed to get crew with id {id}")
 
     session = db.get_session(run_request.session_id) if run_request.session_id else None
-    cached_messages = db.get_messages(run_request.session_id) if run_request.session_id else None
+    cached_messages = (
+        db.get_messages(run_request.session_id) if run_request.session_id else None
+    )
 
     if run_request.session_id and not session:
         raise HTTPException(
@@ -123,8 +125,12 @@ async def run_crew(
         logger.debug(f"on_reply: {message}")
         db.post_message(message)
 
-    crew = Crew(session.profile_id, session, crew_model, on_reply)
+    try:
+        crew = Crew(session.profile_id, session, crew_model, on_reply)
 
+    except TypeError:
+        raise HTTPException(404, "one or more api keys are missing")
+    
     background_tasks.add_task(crew.run, message, messages=cached_messages)
 
     return {
