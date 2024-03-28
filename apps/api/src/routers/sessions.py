@@ -129,7 +129,7 @@ async def run_crew(
         crew = Crew(session.profile_id, session, crew_model, on_reply)
 
     except TypeError:
-        raise HTTPException(404, "one or more api keys are missing")
+        raise HTTPException(400, "one or more api keys are missing")
 
     background_tasks.add_task(crew.run, message, messages=cached_messages)
 
