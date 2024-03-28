@@ -130,7 +130,7 @@ async def run_crew(
 
     except TypeError:
         raise HTTPException(404, "one or more api keys are missing")
-    
+
     background_tasks.add_task(crew.run, message, messages=cached_messages)
 
     return {

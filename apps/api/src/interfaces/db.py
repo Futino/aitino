@@ -214,12 +214,19 @@ if __name__ == "__main__":
     # )
 
     # print(get_tool_api_key(UUID("070c1d2e-9d72-4854-a55e-52ade5a42071"), UUID("3b64fe26-20b9-4064-907e-f2708b5f1656")))
-    print(get_api_key_type_ids(['4ac25953-dc41-42d5-b9f2-bcae3b2c1d9f', 'fa4c2568-00d9-4e3c-9ab7-44f76f3a0e3f']))
+    print(
+        get_api_key_type_ids(
+            [
+                "4ac25953-dc41-42d5-b9f2-bcae3b2c1d9f",
+                "fa4c2568-00d9-4e3c-9ab7-44f76f3a0e3f",
+            ]
+        )
+    )
     # , "3b64fe26-20b9-4064-907e-f2708b5f1656"
-    #print(
+    # print(
     #    get_tool_api_keys(
     #        UUID("070c1d2e-9d72-4854-a55e-52ade5a42071"),
     #        ["5281bbc4-45ea-4f4b-b790-e92c62bbc019"],
     #    )
-    #)
-    #print(get_tool_api_keys(UUID("070c1d2e-9d72-4854-a55e-52ade5a42071")))
+    # )
+    # print(get_tool_api_keys(UUID("070c1d2e-9d72-4854-a55e-52ade5a42071")))
